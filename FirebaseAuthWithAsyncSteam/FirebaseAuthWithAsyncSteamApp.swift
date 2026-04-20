@@ -25,8 +25,8 @@ struct FirebaseAuthWithAsyncSteamApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainView()
-                .environment(AuthManager())
+            RootView()
+                .environment(AuthViewModel())
         }
     }
 }

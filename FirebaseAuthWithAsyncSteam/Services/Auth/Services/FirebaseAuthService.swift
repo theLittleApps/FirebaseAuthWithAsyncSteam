@@ -10,15 +10,19 @@ import FirebaseAuth
 
 struct FirebaseAuthService {
     
-    func addAuthUserListener() -> AsyncStream<UserAuthInfo?> {
+    func addAuthUserListener() -> AsyncStream<AuthState> {
         AsyncStream { continuation in
-            let handle = Auth.auth().addStateDidChangeListener { _, fbUser in
-                if let fbUser {
-                    let user = UserAuthInfo(user: fbUser)
-                    continuation.yield(user)
+            // once authentication state updates, it returns call-back values for user
+            // then using AsyncStream to yield these changes
+            let handle = Auth.auth().addStateDidChangeListener { _, user in
+                if let user {
+                    continuation.yield(.signedIn(uid: user.uid, email: user.email))
+                } else {
+                    continuation.yield(.signedOut)
                 }
             }
             
+            // when task is canceled or stream ends, removing listener
             continuation.onTermination = { _ in
                 Auth.auth().removeStateDidChangeListener(handle)
             }

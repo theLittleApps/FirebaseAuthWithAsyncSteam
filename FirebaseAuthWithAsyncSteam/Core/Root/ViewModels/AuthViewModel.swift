@@ -1,5 +1,5 @@
 //
-//  AuthManager.swift
+//  AuthViewModel.swift
 //  FirebaseAuthWithAsyncSteam
 //
 //  Created by YEN-JU HUANG on 2026/4/14.
@@ -7,28 +7,30 @@
 
 import SwiftUI
 import FirebaseAuth
+import Observation
 
-@MainActor
 @Observable
-class AuthManager {
-    
-    var user: UserAuthInfo?
-    var isLoading = false
+class AuthViewModel {
     
     private let authService: FirebaseAuthService
+    private(set) var state: AuthState = .unknown
     private var authTask: Task<Void, Never>?
     
     init(service: FirebaseAuthService? = nil) {
         self.authService = service ?? FirebaseAuthService()
-        self.addAuthListener()
     }
     
-    private func addAuthListener() {
+    deinit {
+        authTask?.cancel()
+    }
+    
+    func addAuthListener() {
         authTask?.cancel()
         
+        // receive AsyncStream values one by one through for await
         authTask = Task {
-            for await user in authService.addAuthUserListener() {
-                self.user = user
+            for await newState in authService.addAuthUserListener() {
+                self.state = newState
             }
         }
     }
@@ -36,25 +38,17 @@ class AuthManager {
     // MARK: - Public APIs
     func signInAnonymously() {
         Task {
-            isLoading = true
-            
-            defer {
-                isLoading = false
-            }
-            
             do {
                 try await authService.signInAnonymously()
             } catch {
                 print("Fail to login anonymously: \(error)")
             }
-            
         }
     }
     
     func signOut() {
         do {
             try authService.signOut()
-            user = nil
         } catch {
             print("Fail to logout: \(error)")
         }
